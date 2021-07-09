@@ -2,9 +2,9 @@ NAME	=	philo
 
 # -------  ADD -Werror ! -------
 
-FLAG	= 	-Wall -Wextra -I ./includes -I ./libft/
+FLAG	= 	-Wall -Wextra -I ./inc
 FLAG 	+=	-g -ggdb  #-fsanitize=address
-SRCS	=	sources/philo.c
+SRCS	=	src/philo.c
 
 CC		=	gcc
 
