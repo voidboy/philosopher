@@ -31,13 +31,12 @@ typedef struct s_opts {
 }				t_opts;
 
 typedef struct s_philo {
+	int				id;
 	t_opts			options;
-	int				philo;
 	pthread_mutex_t	*forkR;
 	pthread_mutex_t	*forkL;
 	long			numb_meal;
-	long			last_meal;
-	long			starving;
+	struct timeval	last_meal;
 	struct timeval	start;
 }				t_philo;
 

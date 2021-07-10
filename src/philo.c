@@ -1,7 +1,19 @@
+#include <stdio.h>
 #include "philo.h"
 #include "utils.h"
 
-long	ft_delta(struct timeval start)
+void free_philo(void *threads, t_philo *philo, void *forks)
+{
+	free(threads);
+	pthread_mutex_destroy(&philo->options.screen);
+	while (--philo->options.number_of_philosophers >= 0)
+		pthread_mutex_destroy(&(*((pthread_mutex_t *)forks
+			+ philo->options.number_of_philosophers)));
+	free(philo);
+	free(forks);
+}
+
+long	ft_delta(struct timeval ref)
 {
 	struct timeval	delta;
 
@@ -11,79 +23,23 @@ long	ft_delta(struct timeval start)
 		return (-1);
 	}
 	return ((delta.tv_sec * 1e3 + delta.tv_usec / 1e3)
-			- (start.tv_sec * 1e3 + start.tv_usec / 1e3));
+			- (ref.tv_sec * 1e3 + ref.tv_usec / 1e3));
 }
 
-void ft_lock_screen(pthread_mutex_t *screen, t_states a, long h, int id)
+void ft_show_state(t_philo *p, t_states s)
 {
-	static const char *msg[] = {"has taken a fork", "is eating",
+	static const char *states[] = {"has taken a fork", "is eating",
 		"is sleeping", "is thinking", "died"};
 
-	if (pthread_mutex_lock(screen) != 0)
+	if (pthread_mutex_lock(&p->options.screen) != 0)
 		write(STDERR_FILENO, "pthread_mutex_lock error\n", 25);
-	printf("%010ld %03d %s\n", h, id, msg[a]);
-	if (pthread_mutex_unlock(screen) != 0)
+	printf("%010ld %03d %s\n", ft_delta(p->start), p->id + 1, states[s]);
+	if (pthread_mutex_unlock(&p->options.screen) != 0)
 		write(STDERR_FILENO, "pthread_mutex_unlock error\n", 27);
 }
 
-void	ft_nanosleep(long time_to_sleep, long last_meal, long time_to_die, long *starving)
-{
-	long time_slept;
-
-	time_slept = -1;
-	while (++time_slept < time_to_sleep)
-	{
-		if (last_meal + *starving >= last_meal + time_to_die)
-		{
-			printf("DIED !\n");
-			exit(0);
-		}
-		usleep(1e3);
-		(*starving) += 1;
-	}
-}
-
-void ft_miam_miam(t_philo *p)
-{
-	if (pthread_mutex_lock(p->forkR) != 0)
-		write(STDERR_FILENO, "pthread_mutex_lock error\n", 25);
-	ft_lock_screen(&p->options.screen, FORK, ft_delta(p->start), p->philo + 1);
-	if (pthread_mutex_lock(p->forkL) != 0)
-		write(STDERR_FILENO, "pthread_mutex_lock error\n", 25);
-	ft_lock_screen(&p->options.screen, FORK, ft_delta(p->start), p->philo + 1);
-	p->last_meal = ft_delta((struct timeval){0, 0});
-	p->starving = 0;
-	ft_lock_screen(&p->options.screen, EAT, ft_delta(p->start), p->philo + 1);
-	p->numb_meal++;
-	ft_nanosleep(p->options.time_to_eat, p->last_meal, p->options.time_to_die, &p->starving);
-	if (pthread_mutex_unlock(p->forkR) != 0)
-		write(STDERR_FILENO, "pthread_mutex_unlock error\n", 27);
-	if (pthread_mutex_unlock(p->forkL) != 0)
-		write(STDERR_FILENO, "pthread_mutex_unlock error\n", 27);
-}
-
-void	*ft_philosopher(void *philo)
-{
-	t_philo	*p;
-
-	p = (t_philo *)philo;
-	p->last_meal = ft_delta((struct timeval){0, 0});
-	if (!p->philo || !(p->philo % 2))
-	{
-		ft_lock_screen(&p->options.screen, THINK, ft_delta(p->start), p->philo + 1);
-		ft_nanosleep(p->options.time_to_eat, p->last_meal, p->options.time_to_die, &p->starving);
-	}
-	while (p->options.must_eat == -1 || p->numb_meal < p->options.must_eat)
-	{
-		ft_miam_miam(p);
-		ft_lock_screen(&p->options.screen, SLEEP, ft_delta(p->start), p->philo + 1);
-		ft_nanosleep(p->options.time_to_sleep, p->last_meal, p->options.time_to_die, &p->starving);
-		ft_lock_screen(&p->options.screen, THINK, ft_delta(p->start), p->philo + 1);
-	}
-	return (NULL);
-}
-
-int	ft_init_philo(t_opts options, pthread_mutex_t *forks, t_philo *philo)
+int	ft_init_philo(t_opts options, pthread_t *threads, t_philo *philo,
+		pthread_mutex_t *forks)
 {
 	struct timeval	start;
 	int				i;
@@ -98,6 +54,9 @@ int	ft_init_philo(t_opts options, pthread_mutex_t *forks, t_philo *philo)
 			write(STDERR_FILENO, "pthread_mutex_init error\n", 25);
 			while (--i >= 0)
 				pthread_mutex_destroy(&forks[i]);
+			free(threads);
+			free(philo);
+			free(forks);
 			return (-1);
 		}
 	}
@@ -105,30 +64,32 @@ int	ft_init_philo(t_opts options, pthread_mutex_t *forks, t_philo *philo)
 	while (++i < options.number_of_philosophers)
 	{
 		if (i == options.number_of_philosophers - 1)
-			philo[i] = (t_philo){options, i, &forks[i], &forks[0], 0, 0, 0, start};
+			philo[i] = (t_philo){i, options, &forks[i], &forks[0 + 0],
+				0, start, start};
 		else
-			philo[i] = (t_philo){options, i, &forks[i], &forks[i + 1], 0, 0, 0, start};
+			philo[i] = (t_philo){i, options, &forks[i], &forks[i + 1],
+				0, start, start};
 	}
 	return (0);
 }
 
-int	ft_alloc(int n, pthread_t **threads, t_philo **philo,
+int	ft_alloc(t_opts options, pthread_t **threads, t_philo **philo,
 		pthread_mutex_t **forks)
 {
-	*threads = malloc(sizeof(pthread_t) * n);
+	*threads = malloc(sizeof(pthread_t) * options.number_of_philosophers);
 	if (!*threads)
 	{
 		write(STDERR_FILENO, "malloc error\n", 13);
 		return (-1);
 	}
-	*philo = malloc(sizeof(t_philo) * n);
+	*philo = malloc(sizeof(t_philo) * options.number_of_philosophers);
 	if (!*philo)
 	{
 		free(*threads);
 		write(STDERR_FILENO, "malloc error\n", 13);
 		return (-1);
 	}
-	*forks = malloc(sizeof(pthread_mutex_t) * n);
+	*forks = malloc(sizeof(pthread_mutex_t) * options.number_of_philosophers);
 	if (!*forks)
 	{
 		free(*threads);
@@ -166,33 +127,61 @@ t_bool is_valid_options(char *argv[], t_opts *options)
 	return (TRUE);
 }
 
-void free_philo(int n, void *threads, void *philo, void *forks)
+void *ft_philosopher(void *philo)
 {
-	free(threads);
-	free(philo);
-	while (--n >= 0)
-		pthread_mutex_destroy(&(*((pthread_mutex_t *)forks + n)));
-	free(forks);
+	t_philo *p;
+
+	p = (t_philo *)philo;
+	if (!p->id || !(p->id % 2))
+		usleep(p->options.time_to_eat * 1e3);
+	while (p->options.must_eat == -1
+		|| p->numb_meal < p->options.must_eat)
+	{
+		pthread_mutex_lock(p->forkR);
+		ft_show_state(p, FORK);
+		pthread_mutex_lock(p->forkL);
+		ft_show_state(p, FORK);
+		ft_show_state(p, EAT);
+		p->numb_meal++;
+		gettimeofday(&p->last_meal, NULL);
+		usleep(p->options.time_to_eat * 1e3);
+		pthread_mutex_unlock(p->forkR);
+		pthread_mutex_unlock(p->forkL);
+		ft_show_state(p, SLEEP);
+		usleep(p->options.time_to_sleep * 1e3);
+		ft_show_state(p, THINK);
+	}
+	return (NULL);
 }
 
-void ft_atable(t_opts options, pthread_t *threads, t_philo *philo, pthread_mutex_t *forks)
+int start_meal(pthread_t *threads, t_philo *philo)
 {
-	int				n;
+	int i;
 
-	n = -1;
-	while (++n < options.number_of_philosophers)
+	i = -1;
+	while (++i < philo->options.number_of_philosophers)
+			pthread_create(&threads[i], NULL, ft_philosopher, &philo[i]);
+	return (0);
+}
+
+void monitoring(t_philo *philo)
+{
+	int i;
+
+	while (1)
 	{
-		if (pthread_create(&threads[n], NULL, ft_philosopher, (void *)&philo[n]))
+		i = -1;
+		while (++i < philo->options.number_of_philosophers)
 		{
-			/* terminate already launched threads */
-			free_philo(options.number_of_philosophers, threads, philo, forks);
-			return ;
+			if (ft_delta(philo[i].last_meal) >= philo[i].options.time_to_die)
+			{
+				pthread_mutex_lock(&philo[i].options.screen);
+				printf("%010ld %03d died\n", ft_delta(philo[i].last_meal), philo[i].id + 1);
+				return ;
+			}
 		}
 	}
-	n = -1;
-	while (++n < options.number_of_philosophers)
-	   pthread_join(threads[n], NULL);
-   free_philo(options.number_of_philosophers, threads, philo, forks);
+	
 }
 
 int	main(int argc, char *argv[])
@@ -209,9 +198,12 @@ int	main(int argc, char *argv[])
 		write(STDERR_FILENO, "pthread_mutex_init error\n", 25);
 		return (1);
 	}
-	if (ft_alloc(options.number_of_philosophers, &threads, &philo, &forks) == -1
-			|| ft_init_philo(options, forks, philo) == -1)
+	if (ft_alloc(options, &threads, &philo, &forks) == -1
+		|| ft_init_philo(options, threads, philo, forks) == -1)
 		return (1);
-	ft_atable(options, threads, philo, forks);
+	if (start_meal(threads, philo) == -1)
+		return (1);
+	monitoring(philo);
+	free_philo(threads, philo, forks);
 	return (0);
 }
