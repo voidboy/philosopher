@@ -3,8 +3,8 @@ NAME	=	philo
 # -------  ADD -Werror ! -------
 
 FLAG	= 	-Wall -Wextra -I ./inc
-FLAG 	+=	-g -ggdb  #-fsanitize=address
-SRCS	=	src/philo.c
+FLAG 	+=	-g -ggdb -fsanitize=address
+SRCS	=	src/philo.c src/utils.c
 
 CC		=	gcc
 

@@ -8,11 +8,13 @@
 # include <sys/time.h>
 # include <pthread.h>
 
-typedef enum e_action {
+typedef enum e_states {
+	FORK,
 	EAT,
 	SLEEP,
 	THINK,
-}			t_action;
+	DIED,
+}			t_states;
 
 typedef enum e_bool {
 	FALSE,
@@ -33,6 +35,9 @@ typedef struct s_philo {
 	int				philo;
 	pthread_mutex_t	*forkR;
 	pthread_mutex_t	*forkL;
+	long			numb_meal;
+	long			last_meal;
+	long			starving;
 	struct timeval	start;
 }				t_philo;
 
