@@ -30,7 +30,8 @@ void	ft_show_state(t_philo *p, t_states s)
 		"is sleeping", "is thinking", "died"};
 
 	pthread_mutex_lock(&p->options.screen);
-	printf("%5ld %3d %s\n", ft_delta(p->start), p->id + 1, states[s]);
+	if (!p->options.stop_simulation)
+		printf("%5ld %3d %s\n", ft_delta(p->start), p->id + 1, states[s]);
 	pthread_mutex_unlock(&p->options.screen);
 }
 
@@ -132,8 +133,8 @@ void	*ft_philosopher(void *philo)
 	p = (t_philo *)philo;
 	if (!(!p->id || !(p->id % 2)))
 		usleep(p->options.time_to_eat);
-	while (p->options.must_eat == -1
-		|| p->numb_meal < p->options.must_eat)
+	while (!p->options.stop_simulation && (p->options.must_eat == -1
+			|| p->numb_meal < p->options.must_eat))
 	{
 		pthread_mutex_lock(p->forkR);
 		ft_show_state(p, FORK);
@@ -184,9 +185,11 @@ void	ft_monitoring(t_philo *philo)
 			if (ft_delta(philo[i].last_meal) >= philo[i].options.time_to_die)
 			{
 				pthread_mutex_lock(&philo[i].options.screen);
+				philo[i].options.stop_simulation = TRUE;
 				if (!(philo[i].numb_meal == philo[i].options.must_eat))
 					printf("%5ld %3d died\n",
 						ft_delta(philo->start), philo[i].id + 1);
+				pthread_mutex_unlock(&philo[i].options.screen);
 				return ;
 			}
 		}
@@ -202,6 +205,7 @@ int	main(int argc, char *argv[])
 
 	if ((argc != 5 && argc != 6) || !is_valid_options(argv, &options))
 		return (1);
+	options.stop_simulation = FALSE;
 	if (pthread_mutex_init(&options.screen, NULL) == -1)
 	{
 		write(STDERR_FILENO, "pthread_mutex_init error\n", 25);

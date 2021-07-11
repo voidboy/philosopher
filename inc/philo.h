@@ -22,6 +22,7 @@ typedef enum e_bool {
 
 typedef struct s_opts {
 	pthread_mutex_t	screen;
+	t_bool			stop_simulation;
 	int				number_of_philosophers;
 	int				time_to_die;
 	int				time_to_eat;
