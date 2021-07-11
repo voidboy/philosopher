@@ -13,7 +13,6 @@ typedef enum e_states {
 	EAT,
 	SLEEP,
 	THINK,
-	DIED,
 }			t_states;
 
 typedef enum e_bool {
@@ -24,10 +23,10 @@ typedef enum e_bool {
 typedef struct s_opts {
 	pthread_mutex_t	screen;
 	int				number_of_philosophers;
-	int 			time_to_die;
-	int 			time_to_eat;
-	int 			time_to_sleep;
-	int 			must_eat;
+	int				time_to_die;
+	int				time_to_eat;
+	int				time_to_sleep;
+	int				must_eat;
 }				t_opts;
 
 typedef struct s_philo {

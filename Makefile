@@ -1,9 +1,6 @@
 NAME	=	philo
 
-# -------  ADD -Werror ! -------
-
-FLAG	= 	-Wall -Wextra -I ./inc
-FLAG 	+=	-g -ggdb -fsanitize=address
+FLAG	= 	-Wall -Wextra -Werror -I ./inc
 SRCS	=	src/philo.c src/utils.c
 
 CC		=	gcc
