@@ -3,10 +3,12 @@
 
 # include <stdlib.h>
 # include <stdio.h>
+# include <signal.h>
 # include <unistd.h>
 # include <limits.h>
 # include <sys/time.h>
 # include <pthread.h>
+# include <semaphore.h>
 
 typedef enum e_states {
 	FORK,
@@ -21,7 +23,7 @@ typedef enum e_bool {
 }			t_bool;
 
 typedef struct s_opts {
-	pthread_mutex_t	screen;
+	sem_t			*screen;
 	t_bool			stop_simulation;
 	int				number_of_philosophers;
 	int				time_to_die;
@@ -32,9 +34,9 @@ typedef struct s_opts {
 
 typedef struct s_philo {
 	int				id;
+	pid_t			pid;
 	t_opts			options;
-	pthread_mutex_t	*forkR;
-	pthread_mutex_t	*forkL;
+	sem_t			*forks;
 	long			numb_meal;
 	struct timeval	last_meal;
 	struct timeval	start;
