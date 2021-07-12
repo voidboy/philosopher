@@ -1,7 +1,7 @@
 NAME	=	philo_bonus
 
 FLAG	= 	-Wall -Wextra -Werror -I ./inc
-SRCS	=	src/philo.c src/utils.c
+SRCS	=	src/philo.c src/utils.c src/inits.c
 
 CC		=	gcc
 
