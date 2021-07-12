@@ -60,7 +60,7 @@ t_bool	is_valid_options(char *argv[], t_opts *options)
 {
 	int	n;
 
-	if (ft_atoi(argv[1], &n) == FALSE || n < 0)
+	if (ft_atoi(argv[1], &n) == FALSE || n <= 0)
 		return (FALSE);
 	options->number_of_philosophers = n;
 	if (ft_atoi(argv[2], &n) == FALSE || n < 0)
